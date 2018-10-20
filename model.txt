@@ -1,0 +1,70 @@
+ # open quote for modelstring
+  model {
+    for ( i in 1:Ncell ) {
+      y[i] ~ dpois( lambda[i] )
+      lambda[i] <- exp( a0 + a1[x1[i]] + a2[x2[i]] + a3[x3[i]] )
+    }
+    
+    a0 ~ dnorm( yMean , 1/(ySD*2)^2 )
+
+    for ( j1 in 1:Nx1Lvl ) { 
+      a1[j1] ~ dnorm( 0.0 , 1/a1SD^2 ) 
+    }
+    a1SD ~ dgamma(agammaShRa[1],agammaShRa[2]) 
+    
+    for ( j2 in 1:Nx2Lvl ) { 
+      a2[j2] ~ dnorm( 0.0 , 1/a2SD^2 ) 
+    }
+    a2SD ~ dgamma(agammaShRa[1],agammaShRa[2])
+    
+    for ( j3 in 1:Nx3Lvl ) { 
+      a3[j3] ~ dnorm( 0.0 , 1/a3SD^2 ) 
+    }
+    a3SD ~ dgamma(agammaShRa[1],agammaShRa[2])
+    
+    # Convert a0,a1[],a2[],a3[,] to sum-to-zero b0,b1[],b2[],b3[,] :
+    for ( j1 in 1:Nx1Lvl ) { 
+      for ( j2 in 1:Nx2Lvl ) {
+        for ( j3 in 1:Nx3Lvl ) {
+          m[j1,j2,j3] <- a0 + a1[j1] + a2[j2] + a3[j3] # cell means
+        }
+      } 
+    }
+
+    b0 <- mean( m[1:Nx1Lvl,1:Nx2Lvl,1:Nx3Lvl] )
+    
+    for ( j1 in 1:Nx1Lvl ) { 
+      b1[j1] <- mean( m[j1,1:Nx2Lvl,1:Nx3Lvl] ) - b0 
+    }
+    
+    for ( j2 in 1:Nx2Lvl ) { 
+      b2[j2] <- mean( m[1:Nx1Lvl,j2,1:Nx3Lvl] ) - b0 
+    }
+    
+    for ( j3 in 1:Nx3Lvl ) {
+      b3[j3] <- mean( m[1:Nx1Lvl,1:Nx2Lvl,j3] ) - b0  
+    }  
+    
+    # Compute predicted probabilities:
+    for ( j1 in 1:Nx1Lvl ) { 
+      for ( j2 in 1:Nx2Lvl ) {
+        for ( j3 in 1:Nx3Lvl ) {
+          expm[j1,j2,j3] <- exp(m[j1,j2,j3])
+          ppx1x2x3p[j1,j2,j3] <- expm[j1,j2,j3]
+        }
+      } 
+    }
+    
+    for ( j1 in 1:Nx1Lvl ) { 
+      ppx1p[j1] <- sum(ppx1x2x3p[j1,1:Nx2Lvl,1:Nx3Lvl]) 
+    }
+    
+    for ( j2 in 1:Nx2Lvl ) { 
+      ppx2p[j2] <- sum(ppx1x2x3p[1:Nx1Lvl,j2,1:Nx3Lvl]) 
+    }
+    
+    for ( j3 in 1:Nx3Lvl ) { 
+      ppx3p[j3] <- sum(ppx1x2x3p[1:Nx1Lvl,1:Nx2Lvl,j3]) 
+    }
+  }
+  
